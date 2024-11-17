@@ -1,44 +1,21 @@
 import React, { useRef, useState } from 'react';
-import ReactCrop, { centerCrop, convertToPercentCrop, makeAspectCrop } from 'react-image-crop';
+import { usePage } from '@inertiajs/react';
+import ReactCrop, { centerCrop, makeAspectCrop, convertToPercentCrop } from 'react-image-crop';
 import 'react-image-crop/dist/ReactCrop.css';
-import setCanvasPreview from "../setCanvasPreview";
+import setCanvasPreview from '../setCanvasPreview';
 
 const MIN_DIMENSION = 150;
 const ASPECT_RATIO = 1;
 
 export default function CropImage() {
+    const { csrfToken } = usePage().props; // Get CSRF token from Inertia
     const imgRef = useRef(null);
     const previewCanvasRef = useRef(null);
     const [imgSrc, setImgSrc] = useState("");
-    const [crop, setCrop] = useState();
+    const [crop, setCrop] = useState(null);
     const [error, setError] = useState("");
 
-    const handleSaveImage = () => {
-        const canvas = previewCanvasRef.current;
-        canvas.toBlob(async (blob) => {
-            if (blob) {
-                const formData = new FormData();
-                formData.append('image', blob, 'cropped-image.png');
-
-                try {
-                    const response = await fetch('/api/images', {
-                        method: 'POST',
-                        body: formData,
-                    });
-
-                    const result = await response.json();
-                    if (result.success) {
-                        console.log('Image saved successfully:', result.path);
-                    } else {
-                        console.error('Error saving image');
-                    }
-                } catch (error) {
-                    console.error('Error:', error);
-                }
-            }
-        });
-    };
-
+    // Handle file selection
     const onSelectFile = (e) => {
         const file = e.target.files[0];
         if (!file) return;
@@ -50,60 +27,90 @@ export default function CropImage() {
             imageElement.src = imageUrl;
 
             imageElement.addEventListener("load", (e) => {
-                if (error) setError("");
                 const { naturalWidth, naturalHeight } = e.currentTarget;
 
                 if (naturalWidth < MIN_DIMENSION || naturalHeight < MIN_DIMENSION) {
                     setError("Image must be at least 150 x 150 pixels.");
                     return setImgSrc("");
                 }
-            });
 
-            setImgSrc(imageUrl);
+                setError("");
+                setImgSrc(imageUrl);
+            });
         });
         reader.readAsDataURL(file);
     };
 
-    const handleForm = async (e) => {
-        e.preventDefault();
-    };
-
+    // Set up initial crop on image load
     const onImageLoad = (e) => {
         const { width, height } = e.currentTarget;
         const cropWidthInPercent = (MIN_DIMENSION / width) * 100;
 
         const crop = makeAspectCrop(
             {
-                unit: "%",
+                unit: "%", 
                 width: cropWidthInPercent,
             },
             ASPECT_RATIO,
             width,
             height
         );
-        const centeredCrop = centerCrop(crop, width, height);
-        setCrop(centeredCrop);
+
+        setCrop(centerCrop(crop, width, height));
+    };
+
+    // Save cropped image
+    const handleSaveImage = async () => {
+        const canvas = previewCanvasRef.current;
+
+        canvas.toBlob(async (blob) => {
+            if (blob) {
+                const formData = new FormData();
+                formData.append('image', blob, 'cropped-image.png');
+
+                try {
+                    const response = await fetch('/images/upload', {
+                        method: 'POST',
+                        headers: {
+                            Accept: 'application/json',
+                            'X-CSRF-TOKEN': csrfToken, // CSRF token from Inertia
+                        },
+                        body: formData,
+                    });
+
+                    const result = await response.json();
+                    if (result.success) {
+                        console.log('Image saved successfully:', result.path);
+                        alert('Image uploaded successfully!');
+                    } else {
+                        console.error('Error saving image');
+                        alert('Failed to upload image.');
+                    }
+                } catch (error) {
+                    console.error('Error:', error);
+                    alert('An error occurred while uploading the image.');
+                }
+            }
+        });
     };
 
     return (
-        <>
+        <div>
             <label>
                 {error && <p className="error">{error}</p>}
-                <span><h1 className="title">Choose Photo</h1></span> <br /><br />
+                <h1 className="title">Choose Photo</h1>
                 <input type="file" accept="image/*" onChange={onSelectFile} />
             </label>
 
-            {/* Container to hold cropper and preview side by side */}
             <div className="crop-container">
-                {/* Cropper Section */}
                 <div className="crop-section">
                     {imgSrc && (
                         <ReactCrop
-                            onChange={(pixelCrop, percentCrop) => setCrop(pixelCrop)}
                             crop={crop}
+                            onChange={(pixelCrop, percentCrop) => setCrop(pixelCrop)}
+                            aspect={ASPECT_RATIO}
                             circularCrop
                             keepSelection
-                            aspect={ASPECT_RATIO}
                             minWidth={MIN_DIMENSION}
                         >
                             <img
@@ -115,30 +122,31 @@ export default function CropImage() {
                             />
                         </ReactCrop>
                     )}
-                    <button
-                        className="primary-btn mt-2"
-                        onClick={() => {
-                            setCanvasPreview(
-                                imgRef.current,
-                                previewCanvasRef.current,
-                                convertToPercentCrop(
-                                    crop,
-                                    imgRef.current.width,
-                                    imgRef.current.height
-                                )
-                            );
-                        }}
-                    >
-                        Crop Image
-                    </button>
+
+                    {imgSrc && crop && (
+                        <button
+                            className="primary-btn"
+                            onClick={() => {
+                                setCanvasPreview(
+                                    imgRef.current,
+                                    previewCanvasRef.current,
+                                    convertToPercentCrop(
+                                        crop,
+                                        imgRef.current.width,
+                                        imgRef.current.height
+                                    )
+                                );
+                            }}
+                        >
+                            Crop Image
+                        </button>
+                    )}
                 </div>
 
-                {/* Preview Section */}
                 <div className="preview-section">
                     {crop && (
                         <canvas
                             ref={previewCanvasRef}
-                            className="mt-4"
                             style={{
                                 border: "1px solid black",
                                 objectFit: "contain",
@@ -147,11 +155,14 @@ export default function CropImage() {
                             }}
                         />
                     )}
-                    <button className="primary-btn mt-2" onClick={handleSaveImage}>
-                        Crop & Save Image
-                    </button>
+
+                    {crop && (
+                        <button className="primary-btn mt-2" onClick={handleSaveImage}>
+                            Crop & Save Image
+                        </button>
+                    )}
                 </div>
             </div>
-        </>
+        </div>
     );
 }
