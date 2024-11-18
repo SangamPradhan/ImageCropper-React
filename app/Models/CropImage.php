@@ -10,6 +10,10 @@ class CropImage extends Model
     use HasFactory;
 
     protected $fillable = [
-        'image_path'
+        'image_path',
+        'x',
+        'y',
+        'width',
+        'height',
     ];
 }

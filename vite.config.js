@@ -14,5 +14,10 @@ export default defineConfig({
         alias:{
             '@': "resources/js",
         }
-    }
+    },
+    build: {
+        rollupOptions: {
+          external: ['@mui/material', '@emotion/react', '@emotion/styled'],
+        },
+      },
 });

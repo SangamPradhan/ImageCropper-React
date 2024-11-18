@@ -4,6 +4,8 @@ use App\Http\Controllers\CropImageController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 use Illuminate\Http\Request;
+use App\Http\Controllers\ImageController;
+
 
 Route::get('/', function () {
     return Inertia::render('Home');
@@ -13,10 +15,13 @@ Route::get('/', function () {
 
 Route::inertia('/CropImage', 'CropImage');
 
-Route::post('upload', [CropImageController::class, 'upload'])->name('upload');
+Route::post('upload', [ImageController::class, 'upload'])->name('upload');
 
 Route::post('upload','CropImageController@upload')->name('upload');
-use App\Http\Controllers\ImageController;
+
+Route::post('/images/upload', [ImageController::class, 'upload']);
+
+
 
 Route::post('/images/upload', function (Request $request) {
     // Validate the incoming request

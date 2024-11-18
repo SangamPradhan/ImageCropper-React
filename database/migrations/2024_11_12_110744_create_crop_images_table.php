@@ -13,7 +13,11 @@ return new class extends Migration
     {
         Schema::create('crop_images', function (Blueprint $table) {
             $table->id();
-            $table->string('image_path');
+            $table->string('image_path'); // Path to the cropped image
+            $table->integer('x')->nullable(); // X coordinate
+            $table->integer('y')->nullable(); // Y coordinate
+            $table->integer('width')->nullable(); // Width of the cropped image
+            $table->integer('height')->nullable(); // Height of the cropped image
             $table->timestamps();
         });
     }
