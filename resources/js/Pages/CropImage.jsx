@@ -1,6 +1,10 @@
 import { usePage } from '@inertiajs/react';
+<<<<<<< HEAD
 import React, { useRef, useState } from 'react';
 import ReactCrop, { centerCrop } from 'react-image-crop';
+=======
+import ReactCrop, { centerCrop, convertToPercentCrop } from 'react-image-crop';
+>>>>>>> 6bc0c388a6529ca95878a9ff99a56fa21a217658
 import 'react-image-crop/dist/ReactCrop.css';
 
 const MIN_DIMENSION = 150; // Minimum crop size
